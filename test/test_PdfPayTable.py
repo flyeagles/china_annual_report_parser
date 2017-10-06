@@ -9,41 +9,159 @@ import PdfPayTable
 class TestPdfPayTable(unittest.TestCase):
 
     def setUp(self):
-        self.root = os.getcwd()
+        # self.root = os.getcwd()
+        pass
 
     def tearDown(self):
-        os.chdir(self.root)
-
-    def test_world(self):
-        hello = 'hello'
-        self.assertEqual(hello, 'hello')
-
-    def test_init_close(self):
-        pdfpaytable = PdfPayTable.PdfPayTable('/home/yluo')
-        tempfolder = pdfpaytable.get_temp_folder()
-        pdfpaytable.close()
-        self.assertFalse(os.path.exists(tempfolder))
+        #os.chdir(self.root)
+        pass
 
     def test_convert_pdf_to_html(self):
         pdfpaytable = PdfPayTable.PdfPayTable('input')
-        tempfolder = pdfpaytable.get_temp_folder()
         filename = "normal_pay_table"
 
-        newfilename = pdfpaytable.convert_pdf_to_html(filename)
+        file_content = pdfpaytable.convert_pdf_to_html(filename)
 
-        self.assertTrue(os.path.exists(newfilename))
+        self.assertTrue('张家界旅游集团股份有限公司' in file_content.decode('utf-8'))
 
-        #print(tempfolder)
-        pdfpaytable.close()
 
     def test_read_file(self):
         pdfpaytable = PdfPayTable.PdfPayTable('input')
-        filename = "normal_pay_tables.html"
-        (text_list, use_share_table) = pdfpaytable.read_file(filename)
-        print(text_list)
-        print(use_share_table)
 
-        pdfpaytable.close()
+        file_content = '''
+        公司报告期内董事、监事和高级管理人员报酬情况&#160;<br/>
+单位：万元&#160;<br/>
+从公司获得的税&#160;是否在公司关联<br/>
+姓名&#160;<br/>
+职务&#160;<br/>
+性别&#160;<br/>
+年龄&#160;<br/>
+任职状态&#160;<br/>
+前报酬总额&#160;<br/>
+方获取报酬&#160;<br/>
+赵文胜&#160;<br/>
+董事长&#160;<br/>
+男&#160;<br/>
+50&#160;现任&#160;<br/>
+11.98&#160;否&#160;<br/>
+袁祖荣&#160;<br/>
+董事&#160;<br/>
+男&#160;<br/>
+56&#160;现任&#160;<br/>
+62.8&#160;否&#160;<br/>
+罗选国&#160;<br/>
+董事、总裁&#160;<br/>
+男&#160;<br/>
+57&#160;现任&#160;<br/>
+58.8&#160;否&#160;<br/>
+阙道文&#160;<br/>
+董事&#160;<br/>
+男&#160;<br/>
+54&#160;现任&#160;<br/>
+0&#160;是&#160;<br/>
+王爱民&#160;<br/>
+董事&#160;<br/>
+男&#160;<br/>
+47&#160;现任&#160;<br/>
+0&#160;是&#160;<br/>
+谢斌&#160;<br/>
+董事&#160;<br/>
+男&#160;<br/>
+45&#160;现任&#160;<br/>
+0&#160;是&#160;<br/>
+李荻辉&#160;<br/>
+独立董事&#160;<br/>
+女&#160;<br/>
+54&#160;现任&#160;<br/>
+6.34&#160;否&#160;<br/>
+55&#160;<br/>
+<hr/>
+<a name=56></a>张家界旅游集团股份有限公司&#160;2016&#160;年年度报告全文&#160;<br/>
+田贵君&#160;<br/>
+独立董事&#160;<br/>
+男&#160;<br/>
+64&#160;现任&#160;<br/>
+6.34&#160;否&#160;<br/>
+姜亚&#160;<br/>
+独立董事&#160;<br/>
+男&#160;<br/>
+56&#160;现任&#160;<br/>
+6.34&#160;否&#160;<br/>
+万自锋&#160;<br/>
+监事会主席&#160;<br/>
+男&#160;<br/>
+43&#160;现任&#160;<br/>
+4.88&#160;否&#160;<br/>
+宋彬&#160;<br/>
+监事&#160;<br/>
+男&#160;<br/>
+43&#160;现任&#160;<br/>
+0&#160;是&#160;<br/>
+汪方&#160;<br/>
+职工监事&#160;<br/>
+女&#160;<br/>
+38&#160;现任&#160;<br/>
+26.78&#160;否&#160;<br/>
+苏涛&#160;<br/>
+副总裁、工会主席&#160;<br/>
+男&#160;<br/>
+53&#160;现任&#160;<br/>
+38.96&#160;否&#160;<br/>
+金鑫&#160;<br/>
+副总裁、董事会秘书&#160;<br/>
+男&#160;<br/>
+45&#160;现任&#160;<br/>
+38.62&#160;否&#160;<br/>
+朱洪武&#160;<br/>
+副总裁、运营总监&#160;<br/>
+男&#160;<br/>
+52&#160;现任&#160;<br/>
+38.62&#160;否&#160;<br/>
+杨晓曦&#160;<br/>
+副总裁&#160;<br/>
+男&#160;<br/>
+44&#160;现任&#160;<br/>
+36.62&#160;否&#160;<br/>
+张子鹏&#160;<br/>
+工程总监&#160;<br/>
+男&#160;<br/>
+52&#160;现任&#160;<br/>
+35.41&#160;否&#160;<br/>
+向秀&#160;<br/>
+财务总监&#160;<br/>
+女&#160;<br/>
+47&#160;现任&#160;<br/>
+35.08&#160;否&#160;<br/>
+王章利&#160;<br/>
+董事&#160;<br/>
+男&#160;<br/>
+43&#160;离任&#160;<br/>
+44.93&#160;否&#160;<br/>
+刘世星&#160;<br/>
+监事会主席&#160;<br/>
+男&#160;<br/>
+54&#160;离任&#160;<br/>
+52.64&#160;否&#160;<br/>
+王宏伟&#160;<br/>
+行政总监&#160;<br/>
+男&#160;<br/>
+41&#160;离任&#160;<br/>
+5&#160;否&#160;<br/>
+合计&#160;<br/>
+--&#160;<br/>
+--&#160;<br/>
+--&#160;<br/>
+--&#160;<br/>
+510.14&#160;<br/>
+--&#160;<br/>
+公司董事、高级管理人员报告期内被授予的股权激励情况&#160;<br/>
+□&#160;&#160;适用&#160;&#160;√&#160;&#160;不适用&#160;&#160;&#160;<br/>
+五、公司员工情况<b>
+        '''.encode('utf-8')
+
+        (text_list, use_share_table) = pdfpaytable.read_file(file_content)
+        self.assertEqual(128, len(text_list))
+        self.assertFalse(use_share_table)
 
 
 if __name__ == '__main__':

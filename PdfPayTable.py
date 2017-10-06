@@ -6,14 +6,12 @@ import subprocess
 
 class PdfPayTable:
     def __init__(self, folder):
-        os.chdir(folder)
-        self.folder = os.getcwd()
-        self.tempdir = tempfile.mkdtemp()
-        os.chdir(self.tempdir)
+        self.folder = folder
 
 
     def read_file(self, full_html_bytes, encode="utf-8"):
-        FILE = open(filename, mode="r", encoding=encode)
+        #FILE = open(filename, mode="r", encoding=encode)
+        FILE = io.StringIO(full_html_bytes.decode(encoding=encode))
         in_table = False
         use_share_table = False
         text_list = []
@@ -102,26 +100,22 @@ class PdfPayTable:
 
                 pay_list.append(pay)
 
-    def close(self):
-        for name in os.listdir():
-            os.remove(name)
-        os.removedirs(self.tempdir)
-
-    def get_temp_folder(self):
-        return self.tempdir
 
     def convert_pdf_to_html(self, filename):
-        (pipe_r, pipe_w) = os.pipe()
-        subprocess.call("pdftohtml -i {path}/{name}.PDF -stdout".format(path=self.folder, name=filename),
-                      shell=True, stdout=pipe_w)
+        #(pipe_r, pipe_w) = os.pipe()
+        result = subprocess.run("pdftohtml -i {path}/{name}.PDF -stdout".format(path=self.folder, name=filename),
+                      shell=True, stdout=subprocess.PIPE)
 
+        return result.stdout
+
+        '''
         byte_strs = []
         file_binary = os.read(pipe_r, 1024)
         while file_binary is not None:
             byte_strs.append(file_binary)
             file_binary = os.read(pipe_r, 1024)
-
         return bytes.join(byte_strs)
+        '''
 
 
     def read_table(self, filename):
@@ -163,6 +157,6 @@ class PdfPayTable:
 
 
 if __name__ == '__main__':
-    filename = "dygk16" #"zqgf"
+    filename = "zjj" #"zqgf"
     pdfpaytable = PdfPayTable('/home/yluo/download')
     pdfpaytable.read_table(filename)
