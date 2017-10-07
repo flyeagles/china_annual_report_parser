@@ -1,8 +1,8 @@
 import re
-import os
 import io
-import tempfile
-import subprocess
+import logging
+
+logging.basicConfig(format='%(asctime)s]%(message)s', filename="PdfPayTable.log", level=logging.INFO)
 
 
 class PayTableExtracter:
@@ -16,43 +16,83 @@ class PayTableExtracter:
         table_text = "".join(text_list)
         table_text = re.sub('&#160;', ' ', string=table_text)
         table_text = re.sub('<br/>', ' ', string=table_text)
+        table_text = re.sub('\s+', ' ', string=table_text)
         return table_text
 
 
 
 class PayTableExtractorNormal(PayTableExtracter):
-    def __init__(self, text_list):
+    def __init__(self, text_list, symbol):
         super(PayTableExtractorNormal, self).__init__()
         self.text_list = text_list
+        self.symbol = symbol
+        self.type = "normal"
 
+        self.pat_name = '([\w\u3001]{2,12}|\w\s\w)'
+        self.pat_role = '([\w\u3001/]+)'
+        self.pat_sex = '(\w+)'
+        self.pat_age = '(\d+)'
+        self.pat_status = '(\w+)'
+        self.pat_salary = '([\d\.]+)'
+        self.pat_note = '\w+'
 
-    def get_pay_table(self):
-        table_text = self.convert_to_space(self.text_list)
+    def get_pattern(self, pat_id):
 
         '''
         姓名 | 职务 | 性别 | 年龄 | 任职状态 | 从公司获得的税前报酬总额 | 是否在公司关联方获取报酬
         '''
+        pat_list = [self.pat_name, self.pat_role, self.pat_sex, self.pat_age,
+            self.pat_status, self.pat_salary, self.pat_note]
+        if pat_id == 2:
+            '''
+            姓名 | 职务 | 任职状态|性别 | 年龄 |  从公司获得的税前报酬总额 | 是否在公司关联方获取报酬
+            '''
+            pat_list = [self.pat_name, self.pat_role, self.pat_status, self.pat_sex, self.pat_age,
+                         self.pat_salary, self.pat_note]
+
+        return '\s+'.join(pat_list)
+
+    def swap_list_item(self, list, pos1, pos2):
+        temp = list[pos1]
+        list[pos1] = list[pos2]
+        list[pos2] = temp
+
+    def shift_list_item(self, list, pos1, pos2):
+        temp = list[pos1]
+        list[pos1:pos1+1] = []
+        list.insert(pos2, temp)
+
+    def get_pay_table(self):
+        table_text = self.convert_to_space(self.text_list)
         pay_list = []
-        res = re.findall("([\w\u3001]+)\s+([\w\u3001]+)\s+(\w+)\s+(\d+)\s+(\w+)\s+([\d\.]+)\s+\w+", table_text)
-        if res:
-            for item in res:
-                pay = []
-                for i in range(0, 6):
-                    pay.append(item[i])
-                if '\u3001' in pay[0]:
-                    temp = pay[0]
-                    pay[0] = pay[1]
-                    pay[1] = temp
-                pay_list.append(pay)
+        for pat_id in [1, 2]:
+            res = re.findall(self.get_pattern(pat_id), table_text)
+            if res and len(res) > 0:
+                for item in res:
+                    pay = []
+                    for i in range(0, 6):
+                        pay.append(item[i])
+                    if '\u3001' in pay[0]:
+                        self.swap_list_item(pay, 0, 1)
+
+                    if pat_id == 2:
+                        self.shift_list_item(pay,2, 4 )
+
+                    pay_list.append(pay)
+                break
+
+        logging.info("[{sym}][{type}][pattern:{pat}][{rows}]".format(sym=self.symbol,type=self.type, pat=pat_id, rows=len(pay_list)))
 
         return pay_list
 
 
 class PayTableExtractorShare(PayTableExtracter):
-    def __init__(self, text_list, report_date):
+    def __init__(self, text_list, report_date, symbol):
         super(PayTableExtractorShare, self).__init__()
         self.text_list = text_list
         self.report_date = report_date
+        self.symbol = symbol
+        self.type = "share"
 
         self.pat_name = '([\w\u3001]+)'
         self.pat_role = '([\w\u3001]+)'
@@ -142,6 +182,7 @@ class PayTableExtractorShare(PayTableExtracter):
 
                 pay_list.append(pay)
 
+        logging.info("[{sym}][{type}][{rows}]".format(sym=self.symbol,type=self.type, rows=len(pay_list)))
         return pay_list
 
 
@@ -149,16 +190,12 @@ class PayTableExtractorShare(PayTableExtracter):
         table_text = self.convert_to_space(self.text_list)
         return self.extract_share_pay_table(table_text)
 
-
-
-
-
 class PdfPayTable:
     def __init__(self, folder):
         self.folder = folder
 
 
-    def read_file(self, full_html_bytes, report_date='2016-12-31', encode="utf-8"):
+    def read_file(self, filename, full_html_bytes, report_date='2016-12-31', encode="utf-8"):
         #FILE = open(filename, mode="r", encoding=encode)
         FILE = io.StringIO(full_html_bytes.decode(encoding=encode))
         in_table = False
@@ -171,7 +208,7 @@ class PdfPayTable:
 
             if in_table:
                 text_list.append(line)
-                if re.search('公司员工情况', line):
+                if re.search('员工情况', line):
                     break
                 elif re.search('高级管理人员变动情况', line):
                     use_share_table = True
@@ -195,29 +232,20 @@ class PdfPayTable:
         FILE.close()
 
         if use_share_table:
-            return PayTableExtractorShare(text_list, report_date)
+            return PayTableExtractorShare(text_list, report_date, filename)
         else:
-            return PayTableExtractorNormal(text_list)
-
-
-
-    def convert_pdf_to_html(self, filename):
-        #(pipe_r, pipe_w) = os.pipe()
-        result = subprocess.run("pdftohtml -i {path}/{name}.PDF -stdout".format(path=self.folder, name=filename),
-                      shell=True, stdout=subprocess.PIPE)
-
-        return result.stdout
-
+            return PayTableExtractorNormal(text_list, filename)
 
 
     def read_table(self, filename, report_date):
-        full_html_bytes = self.convert_pdf_to_html(filename)
+        pdfconverter = PdfConverter(self.folder)
+        full_html_bytes = pdfconverter.convert_pdf_to_html(filename)
 
         use_share_table = False
         payextracter = None
         for encoding in ["utf-8", "gbk", "gb2312", "hz"]: #, "gb18030", "iso2022_jp_2"]:
             try:
-                payextracter = self.read_file(full_html_bytes, report_date, encoding)
+                payextracter = self.read_file(filename, full_html_bytes, report_date, encoding)
                 break
             except UnicodeDecodeError as e:
                 print(e)
@@ -226,7 +254,7 @@ class PdfPayTable:
 
 
 if __name__ == '__main__':
-    filename = "jwdz" #"zqgf"
-    pdfpaytable = PdfPayTable('/home/yluo/download')
+    filename = "000012_2016" #"zqgf"
+    pdfpaytable = PdfPayTable('../reports/year/2016/0000')
     pay_list = pdfpaytable.read_table(filename, '2016-12-31')
     print(pay_list)
