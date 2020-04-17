@@ -14,7 +14,7 @@ class PdfFileConverter:
         self.folder = folder
         self.filename = filename
         self.html_bytes = self._convert_pdf_to_html(filename)
-        self.FILE_dict = dict()
+        self.FILE = None
 
     def _convert_pdf_to_html(self, filename):
         #(pipe_r, pipe_w) = os.pipe()
@@ -43,17 +43,34 @@ class PdfFileConverter:
             # Pipe will block when file size > 8 MB.
             return res.stdout
 
+    def get_FILE(self):
+        if self.FILE:
+            self.FILE.seek(0, io.SEEK_SET)
+            return self.FILE
 
-    def get_FILE(self, encoding):
-        if encoding not in self.FILE_dict:
-            self.FILE_dict[encoding] = io.StringIO(self.html_bytes.decode(encoding=encoding))
+        for encoding in ["utf-8", "gbk", "gb2312", "hz"]: #, "gb18030", "iso2022_jp_2"]:
+            linecnt = 0
+            try:
+                FILE = io.StringIO(self.html_bytes.decode(encoding=encoding, errors='ignore'))
+                for line in FILE:
+                    linecnt += 1
+                    pass
 
-        self.FILE_dict[encoding].seek(0, io.SEEK_SET)
+                self.FILE = FILE
+                self.FILE.seek(0, io.SEEK_SET)
+                if linecnt > 1000:
+                    break
+                else:
+                    print("Not encoded with " + encoding)
 
-        return self.FILE_dict[encoding]
+            except UnicodeDecodeError as e:
+                print(e)
+
+
+        return self.FILE
+
+
+
 
     def close(self):
-        key_list = [key for key in self.FILE_dict.keys()]
-        for key in key_list:
-            self.FILE_dict[key].close()
-            del self.FILE_dict[key]
+        self.FILE.close()

@@ -9,7 +9,7 @@ class PdfAddress:
         return re.sub(r'^中国', '', string=raw_addr)
 
     def get_address_raw(self, pdfconverter):
-        FILE = pdfconverter.get_FILE('utf-8')
+        FILE = pdfconverter.get_FILE()
         address = ""
         text_list = []
         in_table = False
